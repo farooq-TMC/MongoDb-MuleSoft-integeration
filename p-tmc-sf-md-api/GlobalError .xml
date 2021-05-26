@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<error-handler name="GlobalError_Error_Handler" doc:id="56a68cfd-a6e3-4a8d-8d0e-20828c2c5f40" >
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="486e009b-d556-4f1b-84f0-21f1a8ba7b8b" type="ANY" >
+			<logger level="INFO" doc:name="SF Logger" doc:id="ce397800-e0b6-402a-8a83-a6377564b208" message="#[error.detailedDescription]" />
+			<set-payload value="#[error.detailedDescription]" doc:name="Set Payload" doc:id="69d83aaf-70a7-43c3-be32-f2c26e53696a" />
+		</on-error-propagate>
+	</error-handler>
+</mule>

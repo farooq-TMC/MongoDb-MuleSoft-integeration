@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd">
+	<salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="78c5ccab-51a8-4e55-badd-46d9e5cc4481" >
+		<salesforce:basic-connection username="${secure::sfdc.username}" password="${secure::sfdc.password}" securityToken="${secure::sfdc.token}"/>
+	</salesforce:sfdc-config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="948fc5fa-0fb4-40f7-9e39-a3fc8453f4de" responseTimeout="1200000">
+		<http:request-connection host="${http.host}" port="${http.port}" />
+	</http:request-config>
+	<configuration doc:name="Configuration" doc:id="f15d5ca6-40f4-4b8e-ae9e-7f6626fc846f" defaultErrorHandler-ref="GlobalError_Error_Handler" />
+	<configuration-properties doc:name="Configuration properties" doc:id="e5d1cda6-3451-4c7e-819e-0b5611b85a42" file="properties\dev.properties" />
+	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="6b14eefc-177c-4d65-8c29-8ae0016d98f0" file="properties\dev.properties" key="mulesoft" >
+		<secure-properties:encrypt algorithm="Blowfish" />
+	</secure-properties:config>
+	<flow name="salesforce-mongodb-integrationFlow" doc:id="d58a212e-4310-42a5-920a-02f95fdcb205" >
+		<salesforce:replay-channel-listener streamingChannel="/data/AccountChangeEvent" replayOption="FROM_REPLAY_ID" doc:name="Replay channel listener" doc:id="2d2e8880-c0fc-488b-b156-6607b002811c" config-ref="Salesforce_Config" replayId="-1"/>
+		<ee:transform doc:name="Transform Message" doc:id="792ef7d6-e014-4bf7-b53d-cfe8184e9f35" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="2f05bdb1-d575-4250-a52c-8071348bc1dd" message="#[payload]"/>
+		<try doc:name="Try" doc:id="ea0e51be-bc23-43dd-9a19-ca9e78cf178d" >
+			<http:request method="POST" doc:name="Request" doc:id="5a7d5aba-fea8-4144-a42a-a2558b934023" config-ref="HTTP_Request_configuration" path="/db" />
+			<error-handler >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="99b282c3-35df-4f40-9670-b4c059de897c" type="HTTP:CONNECTIVITY">
+					<ee:transform doc:name="Transform Message" doc:id="d1cac5aa-fcaa-4a59-8bc0-82df12dcf2e7" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message:"Request Connection Issue"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-continue>
+			</error-handler>
+		</try>
+	
+</flow>
+
+</mule>

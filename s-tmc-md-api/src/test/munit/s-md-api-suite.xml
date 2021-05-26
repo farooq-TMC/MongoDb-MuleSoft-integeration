@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+		http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd">
+	<munit:config name="s-md-api-suite.xml" />
+	<munit:test name="s-md-apiFlow-test-upsert" doc:id="c8b18892-e88e-4657-8eef-b777b445bc19" >
+		<munit:behavior >
+			<munit:set-event doc:name="Set Input" doc:id="eddf681a-eedc-4fc7-96c5-a1244c73481c" >
+				<munit:payload value="#[output application/json --- readUrl('classpath://smdapiFlowtestupsert\set-event_payload.dwl')]" encoding="UTF-8" mediaType="application/json" />
+				<munit:attributes value="#[readUrl('classpath://smdapiFlowtestupsert\set-event_attributes.dwl')]" />
+			</munit:set-event>
+		</munit:behavior>
+		<munit:execution >
+			<flow-ref doc:name="Flow-ref to s-md-apiFlow" doc:id="3079f152-7781-4e6f-b2c9-607817ecacbd" name="s-md-apiFlow"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert doc:name="Assert payload" doc:id="39622aa3-3211-4e31-9869-1592c572961b" message="The payload does not match">
+				<munit-tools:that ><![CDATA[#[%dw 2.0
+import smdapiFlowtestupsert::assert_expression_payload
+---
+assert_expression_payload::main({payload: payload, attributes: attributes, vars: vars})]]]></munit-tools:that>
+			</munit-tools:assert>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="s-md-apiFlow-test-DELETE" doc:id="1a946e60-7331-4ca3-a871-df9fbe2f264f" >
+		<munit:behavior >
+			<munit:set-event doc:name="Set Input" doc:id="a0d4e191-626b-460d-a4d6-7c8021708170" >
+				<munit:payload value="#[output application/json --- readUrl('classpath://smdapiFlowtestDELETE\set-event_payload.dwl')]" encoding="UTF-8" mediaType="application/json" />
+				<munit:attributes value="#[readUrl('classpath://smdapiFlowtestDELETE\set-event_attributes.dwl')]" />
+			</munit:set-event>
+		</munit:behavior>
+		<munit:execution >
+			<flow-ref doc:name="Flow-ref to s-md-apiFlow" doc:id="6a1ff78b-ff34-4804-a0d6-2d3d3356427d" name="s-md-apiFlow"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert doc:name="Assert payload" doc:id="c3de637e-3735-4f2c-ae8c-4c6d65ca777b" message="The payload does not match">
+				<munit-tools:that ><![CDATA[#[%dw 2.0
+import smdapiFlowtestDELETE::assert_expression_payload
+---
+assert_expression_payload::main({payload: payload, attributes: attributes, vars: vars})]]]></munit-tools:that>
+			</munit-tools:assert>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="s-md-apiFlow-test-FIND" doc:id="ab563093-727d-44e8-82fd-fb3bb975ebeb" >
+		<munit:behavior >
+			<munit:set-event doc:name="Set Input" doc:id="3322d57f-af48-4173-9290-587ccf79be36" >
+				<munit:payload value="#[output application/json --- readUrl('classpath://smdapiFlowtestFIND\set-event_payload.dwl')]" encoding="UTF-8" mediaType="application/json" />
+				<munit:attributes value="#[readUrl('classpath://smdapiFlowtestFIND\set-event_attributes.dwl')]" />
+			</munit:set-event>
+		</munit:behavior>
+		<munit:execution >
+			<flow-ref doc:name="Flow-ref to s-md-apiFlow" doc:id="196617b1-10a3-4a54-b32f-fa6ba490bde2" name="s-md-apiFlow"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert doc:name="Assert payload" doc:id="355834f2-0a60-4ea3-8e5d-91338052996c" message="The payload does not match">
+				<munit-tools:that ><![CDATA[#[%dw 2.0
+import smdapiFlowtestFIND::assert_expression_payload
+---
+assert_expression_payload::main({payload: payload, attributes: attributes, vars: vars})]]]></munit-tools:that>
+			</munit-tools:assert>
+		</munit:validation>
+	</munit:test>
+
+
+</mule>

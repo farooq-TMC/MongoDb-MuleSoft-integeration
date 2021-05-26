@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:mongo="http://www.mulesoft.org/schema/mule/mongo" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/mongo http://www.mulesoft.org/schema/mule/mongo/current/mule-mongo.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="be96ded8-0679-443a-af44-765ecb8b0bb8" >
+		<http:listener-connection host="${http.host}" port="${http.port}" />
+	</http:listener-config>
+	<mongo:config name="MongoDB_Config" doc:name="MongoDB Config" doc:id="1c16bd20-f882-4665-a7b3-8c3067447a06" >
+		<mongo:connection database="Mongo-Mule-DB" >
+			<mongo:server-addresses >
+				<mongo:server-address host="localhost" />
+			</mongo:server-addresses>
+		</mongo:connection>
+	</mongo:config>
+	<configuration doc:name="Configuration" doc:id="9aaf6620-c795-436c-8d43-6f109c77e888" defaultErrorHandler-ref="GlobalError_Error_Handler" />
+	<configuration-properties doc:name="Configuration properties" doc:id="8e0a6c32-e22f-4485-bd13-7341dffac601" file="properties\dev.properties" />
+	<flow name="s-md-apiFlow" doc:id="87c3f5fc-792b-44f0-ac4e-f96bfb90ccd9" >
+		<http:listener doc:name="Listener" doc:id="63143e5e-0656-4dbe-a7a8-c3b4d0505fa9" config-ref="HTTP_Listener_config" path="/db">
+			<http:error-response statusCode="#[vars.http.StatusCode]" >
+				<http:body ><![CDATA[#[payload]]]></http:body>
+			</http:error-response>
+		</http:listener>
+		<ee:transform doc:name="Transform Message" doc:id="d8d16a39-facb-4f82-890b-ae531d3e5c1d" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="01242943-8009-4692-b391-7f85ec6a457a" message="#[payload]"/>
+		<choice doc:name="Choice" doc:id="07def9b3-26ee-4326-a5ea-382a14652b7a" >
+			<when expression='#[payload.data.payload.ChangeEventHeader.changeType == "CREATE" or payload.data.payload.ChangeEventHeader.changeType == "UPDATE"]'>
+				<set-variable value="#[payload.data.payload.ChangeEventHeader.recordIds[0]]" doc:name="Set Variable" doc:id="01313d75-4738-4cd4-9f46-faab35236db1" variableName="recordId"/>
+				<logger level="INFO" doc:name="Logger" doc:id="9b483b4c-ee87-49f6-9f94-e5e4ea6a3e39" message="#[vars.recordId]"/>
+				<ee:transform doc:name="Transform Message" doc:id="8f7b79d6-e40b-4739-80be-03918d59f8ab">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+
+var a = payload.data.payload.ChangeEventHeader.changedFields
+map {
+    ($):payload.data.payload[$]
+	}
+
+---
+
+
+if(payload.data.payload.ChangeEventHeader.changeType =='UPDATE')
+a reduce ((env, obj={}) -> obj ++ env)
+else
+{
+    Name:payload.data.payload.Name,
+    Phone:payload.data.payload.Phone,
+    Email__c:payload.data.payload.Email__c,
+    recordId:payload.data.payload.ChangeEventHeader.recordIds[0]
+}
+
+]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="00b09df6-61f1-4f9a-905b-dcd73a46ba49" message="#[payload]"/>
+				<mongo:update-documents collectionName="crud" doc:name="Upsert documents" doc:id="3665640e-34dc-434e-bf31-7216988746d7" config-ref="MongoDB_Config" upsert="true">
+					<mongo:query ><![CDATA[#[({ recordId :vars.recordId })]]]></mongo:query>
+				</mongo:update-documents>
+				<ee:transform doc:name="Transform Message" doc:id="ac5f6f52-9a4d-4bf6-bebe-93e6cd968afd">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json 
+---
+{
+	"message":"upsert done"
+	
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			
+</when>
+			<when expression='payload.data.payload.ChangeEventHeader.changeType == "DELETE"'>
+				<set-variable value="#[payload.data.payload.ChangeEventHeader.recordIds[0]]" doc:name="Set Variable" doc:id="09c31cba-f77c-4966-8f29-7582c8bd8cef" variableName="recordId"/>
+				<logger level="INFO" doc:name="Logger" doc:id="8a8f200f-1922-4039-a3dd-d324173a6826" message="#[vars.recordId]"/>
+				<mongo:remove-documents collectionName="crud" doc:name="Remove documents" doc:id="4f995f8b-5a95-4e68-aef8-72dd1548dc6b" config-ref="MongoDB_Config">
+					<mongo:query ><![CDATA[#[({'recordId': vars.recordId})]]]></mongo:query>
+				</mongo:remove-documents>
+				<ee:transform doc:name="Transform Message" doc:id="d6bd09b1-b9ec-4d15-8ef2-80b633e67a72" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	'message':"successfully deleted"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="d56a6796-d709-4e62-9d8c-f49e54b89d30" message='#[vars.recordId ++ " deleted....!!!"]'/>
+			
+</when>
+			<otherwise >
+				<set-variable value="#[attributes.queryParams.id]" doc:name="Set Variable" doc:id="75b95ee5-72d4-4712-b541-1e2307fb37ba" variableName="id"/>
+				<logger level="INFO" doc:name="Logger" doc:id="5652d251-3ba2-4745-8add-cc81311e0d34" message="#[vars.id]"/>
+				<ee:transform doc:name="Transform Message" doc:id="63d8adb4-7559-4b01-9b35-807833cd72a6">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	'recordId': vars.id
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<mongo:find-documents collectionName="crud" doc:name="Find documents" doc:id="7d2215b1-e90a-4e1a-b71e-ec3b17cb28a3" config-ref="MongoDB_Config" fields=",">
+					<mongo:query><![CDATA[#[payload]]]></mongo:query>
+				</mongo:find-documents>
+				<ee:transform doc:name="Transform Message" doc:id="632eeb1c-1e07-4d15-aafd-eb03bbef600a" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+if(sizeOf(payload)==0) 
+{
+	message:"No record found"
+	
+}
+else payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	
+</flow>
+</mule>
